@@ -12,8 +12,10 @@
 #load fenlist from file?
 #error handling and better arguments
 #
+#FEN strings need to be saved in list
 
 import re, sys
+from fnmatch import fnmatch, fnmatchcase
 class Game():
 
     event = ""
@@ -34,10 +36,10 @@ class Game():
        
 
 fenlist = {
-    'rnbqkbnr/*/*/*/*/*/*/RNBQKBNR' : 'starting position',
-    'r1bq1rk1/ppp1pp1p/2n2bp1/8/Q1pP4/2N1P3/PP3PPP/R3KBNR' : 'test',
-    'r1bq1rk1/ppp1pp1p/2n2bp1/8/Q1pP4/2N1P3/PP3PPP/R3KBNR' : 'rook on 7th',
-    'r1bq1rk1/ppp1pp1p/2n2bp1/8/Q1pP4/2N1P3/PP3PPP/R3KBNR' : 'maroczy bind'
+    '*?????rk?/*' : 'starting position',
+    '*r*/*/*/*/*/*/*' : 'test',
+    '*/*/*/*/*/*/*r*r*/*' : 'rook on 7th',
+    '*pnp*/*/*N*P*' : 'maroczy bind'
            }
 
 
@@ -147,7 +149,8 @@ for line in pgn:
 #///pgn file finished///
 for game in gamelist:   #check required fen positions against game movelists
     for fen in fenlist:
-        if (fen in game.movelist):
+        print fen
+        if fnmatch(game.movelist, fen):
             game.fencheck+="1,"
         else:
             game.fencheck+="0,"
@@ -168,82 +171,5 @@ print ("@data")
 for game in gamelist:
     str_list = game.event[0], game.site[0], str(game.result), game.date[0], game.roundno[0], game.whitePlayer[0], game.blackPlayer[0], game.whiteElo[0], game.blackElo[0], game.eco[0], game.fencheck
     print ', '.join(str_list)
-
-
-
-    
-=======
-
-import re
-
-filename = "Hastings1972.pgn"
-pgn = open("Hastings1972.pgn", "r")
-tags=0
-games=0
-movelist = ""
-
-
-for line in pgn:
-
-    if ("[Event" in line):
-        event = re.findall(r'"([^"]*)"', line)
-
-
-    elif ("[Site" in line):
-        site = re.findall(r'"([^"]*)"', line)
-
-    elif ("[Date" in line):
-        date = re.findall(r'"([^"]*)"', line)
-
-
-    elif ("[Round" in line):
-        round = re.findall(r'"([^"]*)"', line)
-
-
-    elif ("[White " in line):
-        w_player = re.findall(r'"([^"]*)"', line)
-
-
-    elif ("[Black " in line):
-        b_player = re.findall(r'"([^"]*)"', line)
-
-
-    elif ("[Result" in line):
-        result = re.findall(r'"([^"]*)"', line)
-
-
-    elif ("[WhiteElo" in line):
-        whiteelo = re.findall(r'"([^"]*)"', line)
-
-
-    elif ("[BlackElo" in line):
-        blackelo = re.findall(r'"([^"]*)"', line)
-
-
-    elif ("[ECO" in line):
-        eco = re.findall(r'"([^"]*)"', line)
-
-    elif (line in ['\n', '\r\n']):
-        if (tags==0):
-            print(event, site, date, round, w_player, b_player, result, whiteelo, blackelo, eco)
-
-            games = games + 1
-       #     print("\n")
-            tags = 1
-
-        else: #end of single chess game
-            tags = tags-1 #reset game
-            print(movelist) #print off chess moves
-            movelist = "" #reset chessmoves
-
-    else:
-        movelist = movelist + line
-pgn.close()
-
-
-    
-
-=======
-print("no of games", games)
 
 
