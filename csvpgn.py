@@ -30,17 +30,17 @@ import subprocess
 class Game():
 
     idno = 0
-    event = ""
-    site = ""
-    date = ""
-    roundno = ""
-    whitePlayer = ""
-    blackPlayer = ""
-    result = ""
-    whiteElo = ""
-    blackElo = ""
-    eco = ""
-    movelist = ""
+    event = "?"
+    site = "?"
+    date = "?"
+    roundno = "?"
+    whitePlayer = "?"
+    blackPlayer = "?"
+    result = "?"
+    whiteElo = "?"
+    blackElo = "?"
+    eco = "?"
+    movelist = "?"
     totalMoves = 0
     fens = []
     fencheck = ""
@@ -103,7 +103,7 @@ def getGames(file):
     games=0
     gamelist = []
     try:
-        pgn = open(file, "r")
+        pgn = open(file, "r", encoding='latin-1')
     except:
         print ("Either no file or incorrect file name")
         print ("python pgntoarff.py [filename]")
@@ -188,14 +188,15 @@ def getGames(file):
                 
             gamelist.append(game)
             game = Game()
-           # sys.stdout.write("Parsing games: " + str(len(gamelist)) + "\r" )
-        #    sys.stdout.flush()
-    
+            #sys.stdout.write("Parsing games: " + str(len(gamelist)) + "\r" )
+            #sys.stdout.flush()
+
                     
             resultFlag = False
            
-        
+                
         #readnextline
+   
     return gamelist
     
 main_database = getGames(filename)
