@@ -187,7 +187,7 @@ def getGames(file):
              game.white_queenside_castle = "1"
         if (" O-O " in line):
             game.black_kingside_castle = "1"
-        if (".O-O" in line):
+        if (".O-O " in line):
             game.white_kingside_castle = "1"
            
             
@@ -287,5 +287,5 @@ print(','.join(attributelist))
 #print(len(gamelist), "games processed")
 
 for game in main_database:
-    str_list = str(game.idno), game.event, game.site, game.date, game.roundno, game.whitePlayer, game.blackPlayer, str(game.result), game.whiteElo, game.blackElo, game.eco[0], str(game.white_kingside_castle), str(game.white_queenside_castle), str(game.black_kingside_castle), str(game.black_queenside_castle), game.fenbinary, #game.movelist
+    str_list = str(game.idno), game.event, game.site, game.date, game.roundno, game.whitePlayer, game.blackPlayer, str(game.result), game.whiteElo, game.blackElo, game.eco[0], str(game.white_kingside_castle), str(game.black_kingside_castle), str(game.white_queenside_castle), str(game.black_queenside_castle), game.fenbinary, #game.movelist
     print (','.join(str_list))
