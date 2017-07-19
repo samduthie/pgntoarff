@@ -45,6 +45,9 @@ class Game():
     fens = []
     fencheck = ""
     fenbinary = ""
+    
+    blackcastle = 0
+    whitecastle = 0
 
 '''
 ? - match any square. The square may be occupied or unoccupied.
@@ -58,14 +61,14 @@ a - match a single Black piece.
 '''
        
 
-fenlist = {
-          # 'FENPattern "*/*/*/*/*/*/*/*/*"',
-            'FENPattern "*/*/*/*/*/*/*r*r*/*"', #white rooks on the 7th
-            'FENPattern "*/*R*R*/*/*/*/*/*/*"', #black rooks on the 7th
+fenlist = [
+            'FENPattern "*/*R*R*/*/*/*/*/*/*"', #white rooks on the 7th
+            'FENPattern "*/*/*/*/*/*/*r*r*/*"', #black rooks on the 7th
             
-            'FENPattern "*/*/*/??pnp???/*/??N???P?/*/*"', #Caro
+            'FENPattern "*/ppp2ppp/*/3p4/*/2P1P3/*/*"', #Caro
+            'FENPattern "*/*/*/??pnp???/*/??N???P?/*/*"', #Maroczy Bind
             'FENPattern "*/pp???ppp/????p???/???p????/*/??P?P???/PP???PPP/*"', #Slav
-           }
+           ]
 
 
 
@@ -83,10 +86,15 @@ attributelist = [
                 'BlackELO', 
                 'ECO', 
                 
+            #    'WhiteCastled',
+            #    'BlackCastled',
+                
                 'WhiteRooks7th',
                 'BlackRooks7th',
                 'Caro',
+                'Maroczy',
                 'Slav',
+                
                  ]
 
 
@@ -100,7 +108,7 @@ except:
 
 def getGames(file):
     tags=0
-    games=0
+    gameno=0
     gamelist = []
     try:
         pgn = open(file, "r", encoding='latin-1')
@@ -113,7 +121,9 @@ def getGames(file):
     resultFlag = False
     fenFlag = False
     tagFlag = False
-    
+    newlineflag = False
+    finished = False
+    newline = 0
     for line in pgn:
         #check if start of game
         #check if end of game
@@ -127,48 +137,54 @@ def getGames(file):
         #if line contains result then set result tag to 1
         if ("[" in line):
             tagFlag = True
-        elif (line in ['\n', '\r\n']):
-            newlineFlag = True
         if ("1-0" in line) or  ("0-1" in line) or ("1/2-1/2" in line):
             resultFlag = True #resets late if it is the result metadata.
         if ("{" in line) or ("}" in line):
             fenFlag = True
+        if (newlineflag):
+             if (line.strip() == ''):
+                finished = True
+                newline+=1
+                newlineflag = False
+        elif (line.strip() == ''):
+            newlineflag = True
             
-    
-        if (tagFlag):
-            if ("[Event" in line):
-                game.event = re.findall(r'"([^"]*)"', line)
-            if ("[Site" in line):
-                game.site = re.findall(r'"([^"]*)"', line)
-            if ("[Date" in line):
-                game.date = re.findall(r'"([^"]*)"', line)
-            if ("[Round" in line):
-                game.roundno = re.findall(r'"([^"]*)"', line)
-            if ("[White " in line):
-                game.whitePlayer = ''.join(re.findall(r'"([^"]*)"', line)).replace(",", "")
-            if ("[Black " in line):
-                game.blackPlayer = ''.join(re.findall(r'"([^"]*)"', line)).replace(",", "")
-            if ("[Result" in line):
-                resultFlag = False
-                tmp = re.findall(r'"([^"]*)"', line)
-                if ("1-0" in tmp): game.result = 1
-                elif ("0-1" in tmp): game.result = -1
-                else: game.result = 0
-            if ("[WhiteElo" in line):
-                game.whiteElo = ''.join(re.findall(r'"([^"]*)"', line))
-            if ("[BlackElo" in line):
-                 game.blackElo = ''.join(re.findall(r'"([^"]*)"', line))
-            if ("[ECO" in line):
-                game.eco = re.findall(r'"([^"]*)"', line)
-            tagFlag = False
-        else:
-            game.movelist+=str(line)
             
-        if(fenFlag): #add all fen positions to game
-            game.fens.append(re.findall(r"\{([^}]+)\}", line))
+        if ("[Event " in line):
+            game.event = ''.join(re.findall(r'"([^"]*)"', line)).replace(",", "")
+        if ("[Site " in line):
+            game.site = ''.join(re.findall(r'"([^"]*)"', line)).replace(",", "")
+        if ("[Date " in line):
+            game.date = ''.join(re.findall(r'"([^"]*)"', line)).replace(",", "")
+        if ("[Round " in line):
+            game.roundno = ''.join(re.findall(r'"([^"]*)"', line)).replace(",", "")
+        if ("[White " in line):
+            game.whitePlayer = ''.join(re.findall(r'"([^"]*)"', line)).replace(",", "")
+        if ("[Black " in line):
+            game.blackPlayer = ''.join(re.findall(r'"([^"]*)"', line)).replace(",", "")
+        if ("[Result " in line):
+            resultFlag = False
+            tmp = re.findall(r'"([^"]*)"', line)
+            if ("1-0" in tmp): game.result = 1
+            elif ("0-1" in tmp): game.result = -1
+            else: game.result = 0
+        if ("[WhiteElo " in line):
+            game.whiteElo = ''.join(re.findall(r'"([^"]*)"', line)).replace(",", "")
+        if ("[BlackElo " in line):
+            game.blackElo = ''.join(re.findall(r'"([^"]*)"', line)).replace(",", "")
+        if ("[ECO " in line):
+            game.eco = re.findall(r'"([^"]*)"', line)
+       
+           
+            
+      #  if(fenFlag): #add all fen positions to game
+      #      game.fens.append(re.findall(r"\{([^}]+)\}", line))
                     
     
-        if (resultFlag is True):   #add game to list and reset
+        if (finished is True):   #add game to list and reset
+            '''
+            There is a bug here. If a game does not have a result tag it will not process properly. Which means that the number of games will not be correct. Which means that the results will not format properly. The data will come out and look fine but will be wrong.
+            '''
     
             #check for missing data first
             if (game.event == "") | (game.event == " " ): game.event="?"
@@ -183,8 +199,12 @@ def getGames(file):
             if (game.eco == ""): game.eco="?"
             if (game.totalMoves == ""): game.totalMoves="?"
             
-            s = game.event[0], game.site[0], game.date[0], game.roundno[0], game.whitePlayer, game.blackPlayer, str(game.result),  game.whiteElo, game.blackElo, game.eco[0], game.fencheck, #game.movelist
+            
+            s = game.date, game.roundno, game.whitePlayer, game.blackPlayer, str(game.result),  game.whiteElo, game.blackElo, game.eco[0], str(game.whitecastle), str(game.blackcastle), game.fenbinary
             game.idno = abs(hash(s)) % (10 ** 8)
+            
+            
+            gameno+=1
                 
             gamelist.append(game)
             game = Game()
@@ -192,14 +212,17 @@ def getGames(file):
             #sys.stdout.flush()
 
                     
-            resultFlag = False
+            finished = False
+            
            
                 
         #readnextline
-   
+  
     return gamelist
     
+    
 main_database = getGames(filename)
+
 
 
 
@@ -209,7 +232,7 @@ main_database = getGames(filename)
 path = 'tmpfenfile.txt'
 TMPDB = 'tmppgnfile.pgn'
 while len(fenlist) > 0:
-    fen = fenlist.pop()
+    fen = fenlist.pop(0)
     writeFile = open(path,'a')
     writeFile.write(fen)
     writeFile.close()
@@ -233,23 +256,22 @@ while len(fenlist) > 0:
             else:
                 game.fenbinary+='0, '
     
-    #remove temporary files
+ #   remove temporary files
     subprocess.call(['rm', path])
     subprocess.call(['rm', TMPDB])
 
 
-
 #//output//
 #csv file commenting ?
-#print ("%dataset compiled by pgntoarff.py")
+#print ("%dataset compiled by csv.py")
 #print ("%", len(gamelist), "games in dataset")
 #print ("\n")
 #print ("@relation", filename)
 #print ("\n")
 
-print(', '.join(attributelist))
+print(','.join(attributelist))
 #print(len(gamelist), "games processed")
 
 for game in main_database:
-    str_list = str(game.idno), game.event[0], game.site[0], game.date[0], game.roundno[0], game.whitePlayer, game.blackPlayer, str(game.result),  game.whiteElo, game.blackElo, game.eco[0], game.fenbinary, #game.movelist
-    print (', '.join(str_list))
+    str_list = str(game.idno), game.event, game.site, game.date, game.roundno, game.whitePlayer, game.blackPlayer, str(game.result),  game.whiteElo, game.blackElo, game.eco[0], game.fenbinary, #game.movelist
+    print (','.join(str_list))
