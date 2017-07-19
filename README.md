@@ -1,12 +1,19 @@
-#Sam Duthie 2017
-#University of Kent
-#
-#py script that takes in pgn file and
-#outputs .arff or .csv file
-#
-#
-#todo:
-#FEN positions 
-#allow user to select desired attributes to output
-#allow user to select csv or arff format
-#
+csvpgn
+==============
+
+Converts chess pgn files into csv formatted files
+Must have pgn-extract installed in directory to use
+
+How To Use
+----------
+python csvpgn.py [input pgn file] [output csvfile]
+
+example:
+python csvpgn.py sample.pgn sample.csv
+
+To do
+----------
+Add in arff file 
+Allow user to choose which fen string they would like to search for
+
+
