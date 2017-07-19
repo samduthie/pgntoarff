@@ -46,8 +46,10 @@ class Game():
     fencheck = ""
     fenbinary = ""
     
-    blackcastle = 0
-    whitecastle = 0
+    black_kingside_castle = 0
+    white_kingside_castle = 0
+    black_queenside_castle = 0
+    white_queenside_castle = 0
 
 '''
 ? - match any square. The square may be occupied or unoccupied.
@@ -86,8 +88,11 @@ attributelist = [
                 'BlackELO', 
                 'ECO', 
                 
-            #    'WhiteCastled',
-            #    'BlackCastled',
+                'White_Kingside_Castled',
+                'Black_Kingside_Castled',
+                'White_Queenside_Castled',
+                'Black_Queenside_Castled',
+                
                 
                 'WhiteRooks7th',
                 'BlackRooks7th',
@@ -174,7 +179,16 @@ def getGames(file):
             game.blackElo = ''.join(re.findall(r'"([^"]*)"', line)).replace(",", "")
         if ("[ECO " in line):
             game.eco = re.findall(r'"([^"]*)"', line)
-       
+        
+        
+        if (" O-O-O " in line):
+            game.black_queenside_castle = "1"
+        if (".O-O-O " in line):
+             game.white_queenside_castle = "1"
+        if (" O-O " in line):
+            game.black_kingside_castle = "1"
+        if (".O-O" in line):
+            game.white_kingside_castle = "1"
            
             
       #  if(fenFlag): #add all fen positions to game
@@ -200,7 +214,7 @@ def getGames(file):
             if (game.totalMoves == ""): game.totalMoves="?"
             
             
-            s = game.date, game.roundno, game.whitePlayer, game.blackPlayer, str(game.result),  game.whiteElo, game.blackElo, game.eco[0], str(game.whitecastle), str(game.blackcastle), game.fenbinary
+            s = game.date, game.roundno, game.whitePlayer, game.blackPlayer, str(game.result),  game.whiteElo, game.blackElo, game.eco[0], game.fenbinary
             game.idno = abs(hash(s)) % (10 ** 8)
             
             
@@ -273,5 +287,5 @@ print(','.join(attributelist))
 #print(len(gamelist), "games processed")
 
 for game in main_database:
-    str_list = str(game.idno), game.event, game.site, game.date, game.roundno, game.whitePlayer, game.blackPlayer, str(game.result),  game.whiteElo, game.blackElo, game.eco[0], game.fenbinary, #game.movelist
+    str_list = str(game.idno), game.event, game.site, game.date, game.roundno, game.whitePlayer, game.blackPlayer, str(game.result), game.whiteElo, game.blackElo, game.eco[0], str(game.white_kingside_castle), str(game.white_queenside_castle), str(game.black_kingside_castle), str(game.black_queenside_castle), game.fenbinary, #game.movelist
     print (','.join(str_list))
