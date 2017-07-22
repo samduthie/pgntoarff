@@ -80,12 +80,13 @@ fenlist = [
             'FENPattern "*/pp???ppp/??pp????/*/??P?P???/*/pp???ppp/*"', #Boleslavsky Wall
             'FENPattern "*/pp???ppp/????pppp/*/???P????/*/PP???PPP/*"', #Queen's Gambit – Isolani
             'FENPattern "*/pp???ppp/??p?????/???p????/???P????/?????p???/pp???ppp/*"', #Queen's Gambit – Orthodox exhchange
+            'FENPatterm "*/pp???ppp/????p???/??Pp????/*???p????/*/pp???ppp?*"', #panov
             'FENPattern "*/pp???ppp/????p???/*/??PP????/*/P????PPP/*"', #Queen's Gambit –  hanging pawns
             'FENPattern "*/ppp???pp/????p???/???p?p??/???P?P??/????P???/PPP???PP/*"', #Stonewall formation
             'FENPattern "*/pp??pppp/???p????/??p?????/????P???/???P????/PPP??PPP/*"', #Closed Sicilian formation
             
-           
-       
+          
+        
            
            
             
@@ -146,7 +147,6 @@ def getGames(file):
     file - a full pgn file (e.g. sample.ogn)
     
     '''
-    tags=0
     gameno=0
     gamelist = []
     try:
@@ -155,11 +155,7 @@ def getGames(file):
         print ("Either no file or incorrect file name")
         print ("python pgntoarff.py [filename]")
         sys.exit()
-    startNewGame = 0
     game = Game()
-    resultFlag = False
-    fenFlag = False
-    tagFlag = False
     newlineflag = False
     finished = False
     newline = 0
@@ -168,12 +164,6 @@ def getGames(file):
     Will fill in missing data with '?'
     '''
     for line in pgn:
-        if ("[" in line):
-            tagFlag = True
-        if ("1-0" in line) or  ("0-1" in line) or ("1/2-1/2" in line):
-            resultFlag = True #resets late if it is the result metadata.
-        if ("{" in line) or ("}" in line):
-            fenFlag = True
         if (newlineflag):
              if (line.strip() == ''):
                 finished = True
@@ -209,19 +199,20 @@ def getGames(file):
             game.eco = re.findall(r'"([^"]*)"', line)
         
         
-        if (" O-O-O " in line):
+        if(re.findall(r'O-O-O\s[0-9]', line)): #black queenside
             game.black_queenside_castle = "1"
-        if (". O-O-O " in line):
+        if(re.findall(r'[0-9].\sO-O-O', line)): #white queenside
              game.white_queenside_castle = "1"
-        if (" O-O " in line):
+        if(re.findall(r'\sO-O\s[0-9]', line)): #black kingside
             game.black_kingside_castle = "1"
-        if (". O-O " in line):
+        if(re.findall(r'[0-9].\sO-O\s', line)): #white kingside
             game.white_kingside_castle = "1"
            
     
         if (finished is True):   #add game to list and reset
             '''
             There is a bug here. If a game does not have a result tag it will not process properly. Which means that the number of games will not be correct. Which means that the results will not format properly. The data will come out and look fine but will be wrong.
+            However, pgn-extract should clean this up beforehand so it shouldn't be a problem.
             '''
     
             #check for missing data first
@@ -288,7 +279,7 @@ while len(fenlist) > 0:
     writeFile.write(fen)
     writeFile.close()
 
-    subprocess.call(['pgn-extract', filename, '-t' + path, "-o", TMPDB, '--fixresulttags', '--quiet', '--nobadresults'])
+    subprocess.call(['pgn-extract', filename, '-t' + path, "-o", TMPDB, '-w 2000', '--fixresulttags', '--quiet', '--nobadresults'])
     
     fen_database = getGames(TMPDB)
    
