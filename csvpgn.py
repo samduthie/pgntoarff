@@ -1,13 +1,15 @@
-#csvpgn.py
-#takes in pgn file from command line
-#outputs csv file with:
-#tagged [] metadata
-#positional data from game
-#UCI engine score data
-#
-#Sam Duthie 2017
-
 '''
+csvpgn.py
+Sam Duthie 2017
+
+takes in pgn file from command line
+example:
+
+$ python csvpgn.py sample.pgn
+
+outputs csv file with:
+tagged metadata and positional data from game
+
 takes in pgn game.
 
 
@@ -21,12 +23,14 @@ to add:
 '''
 
 import re, sys
-#import pandas as pd
-#import numpy as np
 import hashlib
 import subprocess
-#from fnmatch import fnmatch, fnmatchcase
 
+'''
+Game class is a container for each chess game. Each game in a pgn file will be appended to a list - the gamelist
+Most variables inside the game are tagged metadata.
+fenbinary is a string of binary values from the #FEN data.
+'''
 class Game():
 
     idno = 0
@@ -50,31 +54,47 @@ class Game():
     white_kingside_castle = 0
     black_queenside_castle = 0
     white_queenside_castle = 0
-
-'''
-? - match any square. The square may be occupied or unoccupied.
-! - match any occupied square. The square may be occupied by a piece of any type and colour.
-A - match a single White piece.
-a - match a single Black piece.
-* - match zero or more squares, occupied or unoccupied.
-[xyz] - match any of xyz, where xyz represents any of the English piece-letter names (KQRNBPkqrnbp) and is case-sensitive. In addition, 'A' and 'a' (as defined above) are available. For instance: [Qq] matches either a White or Black queen; [BbNn] matches any White or Black bishop or knight; [Ar] matches any White piece or a Black rook.
-[^xyz] If the first character inside the square brackets is '^' then the match is inverted; i.e., match any piece that is not listed. For instance, [^BbNn] matches any piece that is not a White or Black bishop or knight.
-
-'''
        
+'''
+List of fens that are used by pgn-extract to match against each game.
+If a fen pattern is inserted into here it must also be added to the attributelist
 
+Positions taken from https://en.wikipedia.org/wiki/Pawn_structure
+'''
 fenlist = [
             'FENPattern "*/*R*R*/*/*/*/*/*/*"', #white rooks on the 7th
             'FENPattern "*/*/*/*/*/*/*r*r*/*"', #black rooks on the 7th
             
-            'FENPattern "*/ppp2ppp/*/3p4/*/2P1P3/*/*"', #Caro
-            'FENPattern "*/*/*/??pnp???/*/??N???P?/*/*"', #Maroczy Bind
-            'FENPattern "*/pp???ppp/????p???/???p????/*/??P?P???/PP???PPP/*"', #Slav
+            'FENPattern "*/pp???ppp/??p?p???/*/???P????/*/PPP??PPP/*"', #Caro
+            'FENPattern "*/pp??pppp/???p????/*/??P?P???/*/PP???PPP/*"', #Maroczy Bind
+            'FENPattern "*/pp???ppp/??p?p???/*/???P????/????P???/PP???PPP/*"', #Slav
+            'FENPattern "*/pp2pp1p/3p2p1/*/5P3/*/PPP2PPP/*"', #EmptyDragon
+            
+            'FENPattern "*/pp??pp?p/???p??p?/????P???/*/PPP??PPP/*"', #dragon
+            'FENPattern "*/pp???ppp/???pp???/*/????P???/*/PPP??PPP/*"', #Scheveningen
+            'FENPattern "*/?????PPP/PP?PP???/*/??p?p???/*/pp???ppp/*"', #hedgehog
+            'FENPattern "*/pp???ppp/???p????/????p???/????P???/*/PPP??PPP/*"', #Sicilian – Boleslavsky hole
+            'FENPattern "*/ppp??ppp/???p????/???Pp???/????P???/*/PPP??PP/*"', #d5 chain
+            'FENPattern "*/ppp??ppp/????p???/???pP???/???P????/*/PPP??PPP/*"', #e5 chain
+            'FENPattern "*/pp???ppp/??p?????/?????p???/??P?P???/*/PP???PPP/* "', #Rauzer formation
+            'FENPattern "*/pp???ppp/??pp????/*/??P?P???/*/pp???ppp/*"', #Boleslavsky Wall
+            'FENPattern "*/pp???ppp/????pppp/*/???P????/*/PP???PPP/*"', #Queen's Gambit – Isolani
+            'FENPattern "*/pp???ppp/??p?????/???p????/???P????/?????p???/pp???ppp"', #Queen's Gambit – Orthodox exhchange
+            'FENPattern "*/pp???ppp/????p???/*/??PP????/*/P????PPP/*"', #Queen's Gambit –  hanging pawns
+            'FENPattern "*/ppp???pp/????p???/???p?p??/???P?P??/????P???/PPP???PP/*"', #Stonewall formation
+            'FENPattern "*/pp??pppp/???p????/??p?????/????P???/???P????/PPP??PPP/*"', #Closed Sicilian formation
+            
+           
+       
+           
+           
+            
            ]
 
-
-
-  
+'''
+List of attributes that are output at the top of the CSV file.
+If attributes are changed they must also be changed in final print logic block.
+'''
 attributelist = [
                 'idno',
                 'Event', 
@@ -99,19 +119,33 @@ attributelist = [
                 'Caro',
                 'Maroczy',
                 'Slav',
+                'empty_Dragon',
+                'Dragon',
+                'Scheveningen',
+                'hedgehog',
+                'Sicilian_Boleslavsky_hole',
+                'd5_chain',
+                'e5_chain',
+                'Rauzer_formation',
+                'Boleslavsky_Wall',
+                'Queens_Gambit_Isolani',
+                'Queens_Gambit_Orthodox_exhchange',
+                'Panov_formation',
+                'Queens_Gambit_Hanging_Pawns',
+                'Stonewall',
+                'closed_sicilian',
                 
                  ]
 
 
-try:
-    filename = str(sys.argv[1])
-except:
-    print ("Either no file or incorrect file name")
-    print ("python pgntoarff.py [filename]")
-    sys.exit()
-
-
 def getGames(file):
+    '''
+    takes in a pgn file name, opens that file and reads it into memory. 
+    returns a list of game objects.
+    
+    file - a full pgn file (e.g. sample.ogn)
+    
+    '''
     tags=0
     gameno=0
     gamelist = []
@@ -129,17 +163,11 @@ def getGames(file):
     newlineflag = False
     finished = False
     newline = 0
+    '''
+    Follow logic block searches each line in a pgn file to find desired tagged metadata, fen matches and other data such as castling rights
+    Will fill in missing data with '?'
+    '''
     for line in pgn:
-        #check if start of game
-        #check if end of game
-        #check where to send data
-        #send data to game object.
-    
-        #check tags to know where we are
-        #if line starts with [ then set [ tag to 1
-        #if line starts with newline then set newline tag to 1
-        #if line starts with move then set movelist tag to 1
-        #if line contains result then set result tag to 1
         if ("[" in line):
             tagFlag = True
         if ("1-0" in line) or  ("0-1" in line) or ("1/2-1/2" in line):
@@ -183,17 +211,13 @@ def getGames(file):
         
         if (" O-O-O " in line):
             game.black_queenside_castle = "1"
-        if (".O-O-O " in line):
+        if (". O-O-O " in line):
              game.white_queenside_castle = "1"
         if (" O-O " in line):
             game.black_kingside_castle = "1"
-        if (".O-O" in line):
+        if (". O-O " in line):
             game.white_kingside_castle = "1"
            
-            
-      #  if(fenFlag): #add all fen positions to game
-      #      game.fens.append(re.findall(r"\{([^}]+)\}", line))
-                    
     
         if (finished is True):   #add game to list and reset
             '''
@@ -212,37 +236,50 @@ def getGames(file):
             if (game.blackElo == "") | (game.blackElo == " "): game.blackElo="?"
             if (game.eco == ""): game.eco="?"
             if (game.totalMoves == ""): game.totalMoves="?"
+              
             
-            
+            '''
+            hashed string for idno, this is used to match games in smaller databases for fen matching purposes
+            '''
             s = game.date, game.roundno, game.whitePlayer, game.blackPlayer, str(game.result),  game.whiteElo, game.blackElo, game.eco[0], game.fenbinary
             game.idno = abs(hash(s)) % (10 ** 8)
             
-            
+            '''
+            gameno is increased and game is appended into the gamelist.
+            Upon the last game the whole list will be returned
+            '''
             gameno+=1
-                
             gamelist.append(game)
             game = Game()
-            #sys.stdout.write("Parsing games: " + str(len(gamelist)) + "\r" )
-            #sys.stdout.flush()
-
-                    
             finished = False
             
            
-                
-        #readnextline
   
     return gamelist
-    
+
+'''
+open the file in the command line argument
+'''
+try:
+    filename = str(sys.argv[1])
+except:
+    print ("Either no file or incorrect file name")
+    print ("python pgntoarff.py [filename]")
+    sys.exit()
     
 main_database = getGames(filename)
 
+'''
+pgn file finished parsing.
 
+fen checker
+first we create a file with one fen in it for pgn-extract to parse through
+pgn-extract will create a smaller pgn database for that fen.
+we then call getGames on the new database and load it into memory
+finally, every game in the new database will be matched against the main database, 
+games that included matched fens will have their fenbinary string appended to reflect this
+'''
 
-
-#///pgn file finished///
-#fen checker
-#first we create a file with one fen in for pgn-extract
 path = 'tmpfenfile.txt'
 TMPDB = 'tmppgnfile.pgn'
 while len(fenlist) > 0:
@@ -250,11 +287,8 @@ while len(fenlist) > 0:
     writeFile = open(path,'a')
     writeFile.write(fen)
     writeFile.close()
-    
-    
-    
-    
-    subprocess.call(['pgn-extract', filename, '-t' + path, "-o", TMPDB, '--quiet'])
+
+    subprocess.call(['pgn-extract', filename, '-t' + path, "-o", TMPDB, '--fixresulttags', '--quiet', '--nobadresults'])
     
     fen_database = getGames(TMPDB)
    
@@ -270,22 +304,14 @@ while len(fenlist) > 0:
             else:
                 game.fenbinary+='0, '
     
- #   remove temporary files
+    #   remove temporary files
     subprocess.call(['rm', path])
     subprocess.call(['rm', TMPDB])
 
-
-#//output//
-#csv file commenting ?
-#print ("%dataset compiled by csv.py")
-#print ("%", len(gamelist), "games in dataset")
-#print ("\n")
-#print ("@relation", filename)
-#print ("\n")
-
+'''
+output all data in csv format onto command line.
+'''
 print(','.join(attributelist))
-#print(len(gamelist), "games processed")
-
 for game in main_database:
-    str_list = str(game.idno), game.event, game.site, game.date, game.roundno, game.whitePlayer, game.blackPlayer, str(game.result), game.whiteElo, game.blackElo, game.eco[0], str(game.white_kingside_castle), str(game.white_queenside_castle), str(game.black_kingside_castle), str(game.black_queenside_castle), game.fenbinary, #game.movelist
+    str_list = str(game.idno), game.event, game.site, game.date, game.roundno, game.whitePlayer, game.blackPlayer, str(game.result), game.whiteElo, game.blackElo, game.eco[0], str(game.white_kingside_castle), str(game.black_kingside_castle), str(game.white_queenside_castle), str(game.black_queenside_castle), game.fenbinary, #game.movelist
     print (','.join(str_list))
